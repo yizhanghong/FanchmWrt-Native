@@ -31,7 +31,6 @@ jobs:
       targets: "FNET3399"
       upload_source: ${{ github.event_name == 'workflow_dispatch' && inputs.upload_source }}
       build_firmware: ${{ (github.event_name == 'workflow_dispatch' && inputs.build_firmware) || github.event_name != 'workflow_dispatch' }}
-      matrix:
 
   sync_badge:
     if: inputs.badge_status != ''
