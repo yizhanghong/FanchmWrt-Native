@@ -1,4 +1,4 @@
-name: FNet3399-OpenWrt
+name: FNET3399-OpenWrt
 
 on:
 #  schedule:
@@ -28,9 +28,10 @@ jobs:
     uses: ./.github/workflows/OpenWrt-Matrix.yml
     if: github.event.repository.owner.id == github.event.sender.id && inputs.badge_status == ''
     with:
-      targets: "FNet3399"
+      targets: "FNET3399"
       upload_source: ${{ github.event_name == 'workflow_dispatch' && inputs.upload_source }}
       build_firmware: ${{ (github.event_name == 'workflow_dispatch' && inputs.build_firmware) || github.event_name != 'workflow_dispatch' }}
+      matrix:
 
   sync_badge:
     if: inputs.badge_status != ''
