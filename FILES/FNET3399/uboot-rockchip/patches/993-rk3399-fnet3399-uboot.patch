@@ -110,7 +110,7 @@ diff --git a/dts/upstream/src/arm64/rockchip/rk3399-fnet-3399.dts b/dts/upstream
 new file mode 100644
 --- /dev/null
 +++ b/dts/upstream/src/arm64/rockchip/rk3399-fnet-3399.dts	2026-04-08 09:45:53.079921000 +0800
-@@ -0,0 +1,615 @@
+@@ -0,0 +1,789 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +
 +/dts-v1/;
@@ -119,7 +119,6 @@ new file mode 100644
 +#include <dt-bindings/pwm/pwm.h>
 +#include "rk3399.dtsi"
 +
-+
 +/ {
 +	model = "Erya FNet3399";
 +	compatible = "erya,fnet-3399", "rockchip,rk3399";
@@ -127,19 +126,12 @@ new file mode 100644
 +	aliases {
 +		ethernet0 = &gmac;
 +		mmc0 = &sdio0;
-+		mmc1 = &sdhci;
++		mmc1 = &sdmmc;
++		mmc2 = &sdhci;
 +	};
 +
 +	chosen {
 +		stdout-path = "serial2:1500000n8";
-+	};
-+
-+	rfkill-modem {
-+		compatible = "rfkill-gpio";
-+		label = "rfkill-modem";
-+		radio-type = "wwan";
-+		reset-gpios = <&gpio0 RK_PA6 GPIO_ACTIVE_LOW>;
-+		shutdown-gpios = <&gpio4 RK_PB2 GPIO_ACTIVE_LOW>;
 +	};
 +
 +	clkin_gmac: external-gmac-clock {
@@ -220,7 +212,7 @@ new file mode 100644
 +		vin-supply = <&vcc_sys>;
 +	};
 +
-+	gpio-leds {
++	leds: gpio-leds {
 +		compatible = "gpio-leds";
 +		pinctrl-names = "default";
 +		pinctrl-0 = <&user_led2>;
@@ -247,19 +239,26 @@ new file mode 100644
 +		};
 +	};
 +
-+	fan: pwm-fan {
++	fan0: pwm-fan {
 +		compatible = "pwm-fan";
++		cooling-levels = <0 25 50 75 100 150>;
 +		#cooling-cells = <2>;
 +		fan-supply = <&vcc_sys>;
-+		pwms = <&pwm1 0 10000 0>;
-+		rockchip,initial-pwm = <0>;
++		pwms = <&pwm1 0 40000 0>;
 +	};
 +
 +	backlight: backlight {
 +		compatible = "pwm-backlight";
 +		brightness-levels = <0 36 72 108 144 180 216 255>;
-+		default-brightness-level = <4>;
++		default-brightness-level = <5>;
 +		pwms = <&pwm0 0 1000000 0>;
++	};
++
++	ir-receiver {
++		compatible = "gpio-ir-receiver";
++		gpios = <&gpio0 RK_PA6 GPIO_ACTIVE_LOW>;
++		pinctrl-names = "default";
++		pinctrl-0 = <&ir_int>;
 +	};
 +
 +	adc-keys {
@@ -301,6 +300,29 @@ new file mode 100644
 +	cpu-supply = <&vdd_cpu_b>;
 +};
 +
++&gpu {
++	mali-supply = <&vdd_gpu>;
++	status = "okay";
++};
++
++&cpu_thermal {
++	trips {
++		cpu_hot: cpu_hot {
++			hysteresis = <10000>;
++			temperature = <55000>;
++			type = "active";
++		};
++	};
++
++	cooling-maps {
++		map2 {
++			cooling-device =
++				<&fan0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
++			trip = <&cpu_hot>;
++		};
++	};
++};
++
 +&emmc_phy {
 +	status = "okay";
 +};
@@ -321,6 +343,17 @@ new file mode 100644
 +	status = "okay";
 +};
 +
++&hdmi {
++	ddc-i2c-bus = <&i2c3>;
++	pinctrl-names = "default";
++	pinctrl-0 = <&hdmi_cec>;
++	status = "okay";
++};
++
++&hdmi_sound {
++	status = "okay";
++};
++
 +&i2c0 {
 +	clock-frequency = <400000>;
 +	i2c-scl-rising-time-ns = <168>;
@@ -336,7 +369,7 @@ new file mode 100644
 +		clock-output-names = "xin32k", "rk808-clkout2";
 +		pinctrl-names = "default";
 +		pinctrl-0 = <&pmic_int_l &pmic_dvs2>;
-+		rockchip,system-power-controller;
++		system-power-controller;
 +		wakeup-source;
 +
 +		vcc1-supply = <&vcc3v3_sys>;
@@ -432,6 +465,29 @@ new file mode 100644
 +				};
 +			};
 +
++			vcc_sd: LDO_REG4 {
++				regulator-name = "vcc_sd";
++				regulator-always-on;
++				regulator-boot-on;
++				regulator-min-microvolt = <1800000>;
++				regulator-max-microvolt = <3300000>;
++				regulator-state-mem {
++					regulator-on-in-suspend;
++					regulator-suspend-microvolt = <3300000>;
++				};
++			};
++
++			vcca3v0_codec: LDO_REG5 {
++				regulator-name = "vcca3v0_codec";
++				regulator-always-on;
++				regulator-boot-on;
++				regulator-min-microvolt = <3000000>;
++				regulator-max-microvolt = <3000000>;
++				regulator-state-mem {
++					regulator-off-in-suspend;
++				};
++			};
++
 +			vcc_1v5: LDO_REG6 {
 +				regulator-name = "vcc_1v5";
 +				regulator-always-on;
@@ -441,6 +497,17 @@ new file mode 100644
 +				regulator-state-mem {
 +					regulator-on-in-suspend;
 +					regulator-suspend-microvolt = <1500000>;
++				};
++			};
++
++			vcca1v8_codec: LDO_REG7 {
++				regulator-name = "vcca1v8_codec";
++				regulator-always-on;
++				regulator-boot-on;
++				regulator-min-microvolt = <1800000>;
++				regulator-max-microvolt = <1800000>;
++				regulator-state-mem {
++					regulator-off-in-suspend;
 +				};
 +			};
 +
@@ -494,6 +561,25 @@ new file mode 100644
 +			regulator-off-in-suspend;
 +		};
 +	};
++
++	vdd_gpu: regulator@41 {
++		compatible = "silergy,syr828";
++		reg = <0x41>;
++		fcs,suspend-voltage-selector = <1>;
++		pinctrl-names = "default";
++		pinctrl-0 = <&gpu_sleep>;
++		regulator-name = "vdd_gpu";
++		regulator-min-microvolt = <712500>;
++		regulator-max-microvolt = <1500000>;
++		regulator-ramp-delay = <1000>;
++		regulator-always-on;
++		regulator-boot-on;
++		vin-supply = <&vcc_sys>;
++
++		regulator-state-mem {
++			regulator-off-in-suspend;
++		};
++	};
 +};
 +
 +&i2c3 {
@@ -502,8 +588,21 @@ new file mode 100644
 +	status = "okay";
 +};
 +
++&i2s2 {
++	#sound-dai-cells = <0>;
++	status = "okay";
++};
++
++&iep_mmu {
++	status = "okay";
++};
++
 +&io_domains {
 +	status = "okay";
++
++	bt656-supply = <&vcc_3v0>;
++	audio-supply = <&vcca1v8_codec>;
++	sdmmc-supply = <&vcc_sd>;
 +	gpio1830-supply = <&vcc_3v0>;
 +};
 +
@@ -531,6 +630,10 @@ new file mode 100644
 +			rockchip,pins = <1 RK_PC1 RK_FUNC_GPIO &pcfg_pull_down>;
 +		};
 +
++		gpu_sleep: gpu-sleep {
++			rockchip,pins = <1 RK_PB6 RK_FUNC_GPIO &pcfg_pull_down>;
++		};
++
 +		pmic_int_l: pmic-int-l {
 +			rockchip,pins = <1 RK_PB2 RK_FUNC_GPIO &pcfg_pull_up>;
 +		};
@@ -552,6 +655,20 @@ new file mode 100644
 +		};
 +	};
 +
++	bt {
++		bt_enable_h: bt-enable-h {
++			rockchip,pins = <0 RK_PB1 RK_FUNC_GPIO &pcfg_pull_none>;
++		};
++
++		bt_host_wake_l: bt-host-wake-l {
++			rockchip,pins = <0 RK_PA4 RK_FUNC_GPIO &pcfg_pull_down>;
++		};
++
++		bt_wake_l: bt-wake-l {
++			rockchip,pins = <2 RK_PD2 RK_FUNC_GPIO &pcfg_pull_none>;
++		};
++	};
++
 +	gmac {
 +		vcc_phy_h: vcc-phy-h {
 +			rockchip,pins = <0 RK_PB4 RK_FUNC_GPIO &pcfg_pull_up>;
@@ -561,6 +678,12 @@ new file mode 100644
 +	leds {
 +		user_led2: user_led2 {
 +			rockchip,pins = <2 RK_PD3 RK_FUNC_GPIO &pcfg_pull_none>;
++		};
++	};
++
++	ir {
++		ir_int: ir-int {
++			rockchip,pins = <0 RK_PA6 RK_FUNC_GPIO &pcfg_pull_none>;
 +		};
 +	};
 +
@@ -588,9 +711,8 @@ new file mode 100644
 +	status = "okay";
 +};
 +
++// if kernel panic at system boot, try to disable WiFi
 +&sdio0 {
-+	#address-cells = <1>;
-+	#size-cells = <0>;
 +	bus-width = <4>;
 +	cap-sd-highspeed;
 +	cap-sdio-irq;
@@ -603,6 +725,8 @@ new file mode 100644
 +	pinctrl-names = "default";
 +	pinctrl-0 = <&sdio0_bus4 &sdio0_cmd &sdio0_clk>;
 +	sd-uhs-sdr104;
++	#address-cells = <1>;
++	#size-cells = <0>;
 +	status = "okay";
 +
 +	brcmf: wifi@1 {
@@ -617,6 +741,20 @@ new file mode 100644
 +	};
 +};
 +
++&sdmmc {
++	bus-width = <4>;
++	cap-sd-highspeed;
++	cd-gpios = <&gpio0 RK_PA7 GPIO_ACTIVE_LOW>;
++	clock-frequency = <150000000>;
++	disable-wp;
++	sd-uhs-sdr104;
++	max-frequency = <150000000>;
++	pinctrl-names = "default";
++	pinctrl-0 = <&sdmmc_clk &sdmmc_cmd &sdmmc_cd &sdmmc_bus4>;
++	vqmmc-supply = <&vcc_sd>;
++	status = "okay";
++};
++
 +&sdhci {
 +	bus-width = <8>;
 +	mmc-hs400-1_8v;
@@ -627,10 +765,10 @@ new file mode 100644
 +};
 +
 +&spi2 {
-+	status = "disabled";
++	status = "okay";
 +
 +	panel@0 {
-+		compatible = "sitronix,st7735r";
++		compatible = "sitronix,st7735s", "sitronix,st7735r", "sitronix,st7789v", "jianda,jd-t18003-t01";
 +		reg = <0>;
 +		rgb;
 +		width = <80>;
@@ -689,6 +827,26 @@ new file mode 100644
 +	};
 +};
 +
++&uart0 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&uart0_xfer &uart0_cts &uart0_rts>;
++	status = "okay";
++
++	bluetooth {
++		compatible = "brcm,bcm43438-bt";
++		clocks = <&rk808 1>;
++		clock-names = "lpo";
++		device-wakeup-gpios = <&gpio2 RK_PD2 GPIO_ACTIVE_HIGH>;
++		host-wakeup-gpios = <&gpio0 RK_PA4 GPIO_ACTIVE_HIGH>;
++		shutdown-gpios = <&gpio0 RK_PB1 GPIO_ACTIVE_HIGH>;
++		max-speed = <4000000>;
++		pinctrl-names = "default";
++		pinctrl-0 = <&bt_host_wake_l &bt_wake_l &bt_enable_h>;
++		vbat-supply = <&vcc3v3_sys>;
++		vddio-supply = <&vcc_1v8>;
++	};
++};
++
 +&uart2 {
 +	status = "okay";
 +};
@@ -725,4 +883,20 @@ new file mode 100644
 +&usbdrd_dwc3_1 {
 +	status = "okay";
 +	dr_mode = "host";
++};
++
++&vopb {
++	status = "okay";
++};
++
++&vopb_mmu {
++	status = "okay";
++};
++
++&vopl {
++	status = "okay";
++};
++
++&vopl_mmu {
++	status = "okay";
 +};
