@@ -197,6 +197,7 @@ jobs:
         working-directory: ${{ github.workspace }}/openwrt
         run: |
           cp -rf ../SEED/${{ env.seed }}/config.seed .config
+          cat ../SEED/WLAN&WWAN.seed >> .config
 
       - name: Make Config
         working-directory: ${{ github.workspace }}/openwrt
